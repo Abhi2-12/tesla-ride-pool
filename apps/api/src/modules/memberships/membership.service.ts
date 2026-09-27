@@ -30,7 +30,7 @@ export async function getMembershipById(id: string) {
 
   if (!membership) {
     throw new AppError(
-      "Pool membership not found",
+      "Membership not found",
       404,
       "MEMBERSHIP_NOT_FOUND",
     );
@@ -58,19 +58,11 @@ export async function createMembership(
   ]);
 
   if (!pool) {
-    throw new AppError(
-      "Pool not found",
-      404,
-      "POOL_NOT_FOUND",
-    );
+    throw new AppError("Pool not found", 404, "POOL_NOT_FOUND");
   }
 
   if (!user) {
-    throw new AppError(
-      "User not found",
-      404,
-      "USER_NOT_FOUND",
-    );
+    throw new AppError("User not found", 404, "USER_NOT_FOUND");
   }
 
   if (!rideRequest) {
@@ -83,7 +75,7 @@ export async function createMembership(
 
   if (pool.memberships.length >= pool.capacity) {
     throw new AppError(
-      "Pool is at capacity",
+      "Pool has reached its capacity",
       409,
       "POOL_FULL",
     );
@@ -105,7 +97,17 @@ export async function createMembership(
   }
 
   return prisma.poolMembership.create({
-    data: input,
+    data: {
+      poolId: input.poolId,
+      userId: input.userId,
+      rideRequestId: input.rideRequestId,
+      status: input.status,
+    },
+    include: {
+      pool: true,
+      user: true,
+      rideRequest: true,
+    },
   });
 }
 
@@ -113,16 +115,47 @@ export async function updateMembership(
   id: string,
   input: UpdateMembershipInput,
 ) {
-  await getMembershipById(id);
+  const existing = await prisma.poolMembership.findUnique({
+    where: { id },
+  });
+
+  if (!existing) {
+    throw new AppError(
+      "Membership not found",
+      404,
+      "MEMBERSHIP_NOT_FOUND",
+    );
+  }
+
+  const data = {
+    ...(input.status !== undefined
+      ? { status: input.status }
+      : {}),
+  };
 
   return prisma.poolMembership.update({
     where: { id },
-    data: input,
+    data,
+    include: {
+      pool: true,
+      user: true,
+      rideRequest: true,
+    },
   });
 }
 
 export async function deleteMembership(id: string) {
-  await getMembershipById(id);
+  const existing = await prisma.poolMembership.findUnique({
+    where: { id },
+  });
+
+  if (!existing) {
+    throw new AppError(
+      "Membership not found",
+      404,
+      "MEMBERSHIP_NOT_FOUND",
+    );
+  }
 
   await prisma.poolMembership.delete({
     where: { id },

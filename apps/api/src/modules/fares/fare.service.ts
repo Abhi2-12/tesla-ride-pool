@@ -1,5 +1,5 @@
+import { Prisma } from "../../../generated/prisma/client.js";
 import { prisma } from "../../lib/prisma.js";
-import { AppError } from "../../errors/app-error.js";
 import type {
   CreateFareInput,
   UpdateFareInput,
@@ -18,23 +18,13 @@ export async function listFares() {
 }
 
 export async function getFareById(id: string) {
-  const fare = await prisma.fare.findUnique({
+  return prisma.fare.findUnique({
     where: { id },
     include: {
       pool: true,
       user: true,
     },
   });
-
-  if (!fare) {
-    throw new AppError(
-      "Fare not found",
-      404,
-      "FARE_NOT_FOUND",
-    );
-  }
-
-  return fare;
 }
 
 export async function createFare(input: CreateFareInput) {
@@ -48,19 +38,11 @@ export async function createFare(input: CreateFareInput) {
   ]);
 
   if (!pool) {
-    throw new AppError(
-      "Pool not found",
-      404,
-      "POOL_NOT_FOUND",
-    );
+    throw new Error("Pool not found");
   }
 
   if (!user) {
-    throw new AppError(
-      "User not found",
-      404,
-      "USER_NOT_FOUND",
-    );
+    throw new Error("User not found");
   }
 
   return prisma.fare.create({
@@ -68,7 +50,12 @@ export async function createFare(input: CreateFareInput) {
       poolId: input.poolId,
       userId: input.userId,
       amount: input.amount,
-      calculationData: input.calculationData,
+      calculationData:
+        input.calculationData as Prisma.InputJsonValue,
+    },
+    include: {
+      pool: true,
+      user: true,
     },
   });
 }
@@ -77,21 +64,46 @@ export async function updateFare(
   id: string,
   input: UpdateFareInput,
 ) {
-  await getFareById(id);
+  const existing = await prisma.fare.findUnique({
+    where: { id },
+  });
+
+  if (!existing) {
+    throw new Error("Fare not found");
+  }
+
+  const data = {
+    ...(input.amount !== undefined
+      ? { amount: input.amount }
+      : {}),
+    ...(input.calculationData !== undefined
+      ? {
+          calculationData:
+            input.calculationData as Prisma.InputJsonValue,
+        }
+      : {}),
+  };
 
   return prisma.fare.update({
     where: { id },
-    data: {
-      amount: input.amount,
-      calculationData: input.calculationData,
+    data,
+    include: {
+      pool: true,
+      user: true,
     },
   });
 }
 
 export async function deleteFare(id: string) {
-  await getFareById(id);
+  const existing = await prisma.fare.findUnique({
+    where: { id },
+  });
 
-  await prisma.fare.delete({
+  if (!existing) {
+    throw new Error("Fare not found");
+  }
+
+  return prisma.fare.delete({
     where: { id },
   });
 }

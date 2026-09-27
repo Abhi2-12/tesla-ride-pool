@@ -48,31 +48,33 @@ export async function createPool(input: CreatePoolInput) {
   ]);
 
   if (!vehicle) {
-    throw new AppError(
-      "Pool vehicle not found",
-      404,
-      "VEHICLE_NOT_FOUND",
-    );
+    throw new AppError("Vehicle not found", 404, "VEHICLE_NOT_FOUND");
   }
 
   if (!creator) {
-    throw new AppError(
-      "Pool creator not found",
-      404,
-      "CREATOR_NOT_FOUND",
-    );
+    throw new AppError("Creator not found", 404, "CREATOR_NOT_FOUND");
   }
 
   if (input.capacity > vehicle.capacity) {
     throw new AppError(
       "Pool capacity cannot exceed vehicle capacity",
-      400,
+      409,
       "POOL_CAPACITY_EXCEEDED",
     );
   }
 
   return prisma.pool.create({
-    data: input,
+    data: {
+      vehicleId: input.vehicleId,
+      creatorId: input.creatorId,
+      capacity: input.capacity,
+      state: input.state,
+    },
+    include: {
+      vehicle: true,
+      creator: true,
+      memberships: true,
+    },
   });
 }
 
@@ -80,54 +82,84 @@ export async function updatePool(
   id: string,
   input: UpdatePoolInput,
 ) {
-  const pool = await getPoolById(id);
+  const existing = await prisma.pool.findUnique({
+    where: { id },
+    include: {
+      vehicle: true,
+      memberships: true,
+    },
+  });
+
+  if (!existing) {
+    throw new AppError("Pool not found", 404, "POOL_NOT_FOUND");
+  }
 
   if (
     input.capacity !== undefined &&
-    input.capacity < pool.memberships.length
+    input.capacity < existing.memberships.length
   ) {
     throw new AppError(
       "Pool capacity cannot be lower than current membership count",
-      400,
+      409,
       "POOL_CAPACITY_TOO_LOW",
     );
   }
 
   if (
     input.capacity !== undefined &&
-    input.capacity > pool.vehicle.capacity
+    input.capacity > existing.vehicle.capacity
   ) {
     throw new AppError(
       "Pool capacity cannot exceed vehicle capacity",
-      400,
+      409,
       "POOL_CAPACITY_EXCEEDED",
     );
   }
 
-  const updated = await prisma.pool.update({
+  const data = {
+    ...(input.capacity !== undefined
+      ? { capacity: input.capacity }
+      : {}),
+    ...(input.state !== undefined
+      ? { state: input.state }
+      : {}),
+  };
+
+  const pool = await prisma.pool.update({
     where: { id },
-    data: input,
+    data,
+    include: {
+      vehicle: true,
+      creator: true,
+      memberships: true,
+    },
   });
 
   if (
     input.state !== undefined &&
-    input.state !== pool.state
+    input.state !== existing.state
   ) {
     await prisma.rideHistory.create({
       data: {
         poolId: id,
-        oldState: pool.state,
+        oldState: existing.state,
         newState: input.state,
-        changedBy: pool.creatorId,
+        changedBy: existing.creatorId,
       },
     });
   }
 
-  return updated;
+  return pool;
 }
 
 export async function deletePool(id: string) {
-  await getPoolById(id);
+  const existing = await prisma.pool.findUnique({
+    where: { id },
+  });
+
+  if (!existing) {
+    throw new AppError("Pool not found", 404, "POOL_NOT_FOUND");
+  }
 
   await prisma.pool.delete({
     where: { id },

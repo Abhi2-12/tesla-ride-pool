@@ -17,7 +17,7 @@ export async function listRideRequests() {
 }
 
 export async function getRideRequestById(id: string) {
-  const request = await prisma.rideRequest.findUnique({
+  const rideRequest = await prisma.rideRequest.findUnique({
     where: { id },
     include: {
       user: true,
@@ -25,7 +25,7 @@ export async function getRideRequestById(id: string) {
     },
   });
 
-  if (!request) {
+  if (!rideRequest) {
     throw new AppError(
       "Ride request not found",
       404,
@@ -33,28 +33,30 @@ export async function getRideRequestById(id: string) {
     );
   }
 
-  return request;
+  return rideRequest;
 }
 
 export async function createRideRequest(
   input: CreateRideRequestInput,
 ) {
   const user = await prisma.user.findUnique({
-    where: {
-      id: input.userId,
-    },
+    where: { id: input.userId },
   });
 
   if (!user) {
-    throw new AppError(
-      "Ride request user not found",
-      404,
-      "USER_NOT_FOUND",
-    );
+    throw new AppError("User not found", 404, "USER_NOT_FOUND");
   }
 
   return prisma.rideRequest.create({
-    data: input,
+    data: {
+      userId: input.userId,
+      origin: input.origin,
+      destination: input.destination,
+      status: input.status,
+    },
+    include: {
+      user: true,
+    },
   });
 }
 
@@ -62,16 +64,51 @@ export async function updateRideRequest(
   id: string,
   input: UpdateRideRequestInput,
 ) {
-  await getRideRequestById(id);
+  const existing = await prisma.rideRequest.findUnique({
+    where: { id },
+  });
+
+  if (!existing) {
+    throw new AppError(
+      "Ride request not found",
+      404,
+      "RIDE_REQUEST_NOT_FOUND",
+    );
+  }
+
+  const data = {
+    ...(input.origin !== undefined
+      ? { origin: input.origin }
+      : {}),
+    ...(input.destination !== undefined
+      ? { destination: input.destination }
+      : {}),
+    ...(input.status !== undefined
+      ? { status: input.status }
+      : {}),
+  };
 
   return prisma.rideRequest.update({
     where: { id },
-    data: input,
+    data,
+    include: {
+      user: true,
+    },
   });
 }
 
 export async function deleteRideRequest(id: string) {
-  await getRideRequestById(id);
+  const existing = await prisma.rideRequest.findUnique({
+    where: { id },
+  });
+
+  if (!existing) {
+    throw new AppError(
+      "Ride request not found",
+      404,
+      "RIDE_REQUEST_NOT_FOUND",
+    );
+  }
 
   try {
     await prisma.rideRequest.delete({
@@ -81,7 +118,7 @@ export async function deleteRideRequest(id: string) {
     throw new AppError(
       "Ride request cannot be deleted because related records exist",
       409,
-      "RIDE_REQUEST_DELETE_CONFLICT",
+      "RIDE_REQUEST_HAS_RELATIONS",
     );
   }
 }

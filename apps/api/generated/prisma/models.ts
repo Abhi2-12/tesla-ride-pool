@@ -8,11 +8,14 @@
  *
  * 🟢 You can import this file directly.
  */
-export type * from './models/User'
-export type * from './models/Vehicle'
-export type * from './models/RideRequest'
-export type * from './models/Pool'
-export type * from './models/PoolMembership'
-export type * from './models/RideHistory'
-export type * from './models/Fare'
-export type * from './commonInputTypes'
+export type * from './models/User.js'
+export type * from './models/Session.js'
+export type * from './models/Account.js'
+export type * from './models/Verification.js'
+export type * from './models/Vehicle.js'
+export type * from './models/RideRequest.js'
+export type * from './models/Pool.js'
+export type * from './models/PoolMembership.js'
+export type * from './models/RideHistory.js'
+export type * from './models/Fare.js'
+export type * from './commonInputTypes.js'

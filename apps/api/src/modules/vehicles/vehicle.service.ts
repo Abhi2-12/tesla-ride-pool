@@ -1,5 +1,4 @@
 import { prisma } from "../../lib/prisma.js";
-import { AppError } from "../../errors/app-error.js";
 import type {
   CreateVehicleInput,
   UpdateVehicleInput,
@@ -17,41 +16,32 @@ export async function listVehicles() {
 }
 
 export async function getVehicleById(id: string) {
-  const vehicle = await prisma.vehicle.findUnique({
+  return prisma.vehicle.findUnique({
     where: { id },
     include: {
       owner: true,
     },
   });
-
-  if (!vehicle) {
-    throw new AppError(
-      "Vehicle not found",
-      404,
-      "VEHICLE_NOT_FOUND",
-    );
-  }
-
-  return vehicle;
 }
 
 export async function createVehicle(input: CreateVehicleInput) {
   const owner = await prisma.user.findUnique({
-    where: {
-      id: input.ownerId,
-    },
+    where: { id: input.ownerId },
   });
 
   if (!owner) {
-    throw new AppError(
-      "Vehicle owner not found",
-      404,
-      "OWNER_NOT_FOUND",
-    );
+    throw new Error("Owner not found");
   }
 
   return prisma.vehicle.create({
-    data: input,
+    data: {
+      ownerId: input.ownerId,
+      type: input.type,
+      capacity: input.capacity,
+    },
+    include: {
+      owner: true,
+    },
   });
 }
 
@@ -59,26 +49,48 @@ export async function updateVehicle(
   id: string,
   input: UpdateVehicleInput,
 ) {
-  await getVehicleById(id);
+  const existing = await prisma.vehicle.findUnique({
+    where: { id },
+  });
+
+  if (!existing) {
+    throw new Error("Vehicle not found");
+  }
+
+  const data = {
+    ...(input.type !== undefined
+      ? { type: input.type }
+      : {}),
+    ...(input.capacity !== undefined
+      ? { capacity: input.capacity }
+      : {}),
+  };
 
   return prisma.vehicle.update({
     where: { id },
-    data: input,
+    data,
+    include: {
+      owner: true,
+    },
   });
 }
 
 export async function deleteVehicle(id: string) {
-  await getVehicleById(id);
+  const existing = await prisma.vehicle.findUnique({
+    where: { id },
+  });
+
+  if (!existing) {
+    throw new Error("Vehicle not found");
+  }
 
   try {
-    await prisma.vehicle.delete({
+    return await prisma.vehicle.delete({
       where: { id },
     });
   } catch {
-    throw new AppError(
-      "Vehicle cannot be deleted because related pools exist",
-      409,
-      "VEHICLE_DELETE_CONFLICT",
+    throw new Error(
+      "Vehicle cannot be deleted because it is referenced by another record",
     );
   }
 }
