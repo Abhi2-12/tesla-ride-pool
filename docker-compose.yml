@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: tesla-ride-pool-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tesla
+      POSTGRES_PASSWORD: tesla_dev_password
+      POSTGRES_DB: tesla_ride_pool
+    ports:
+      - "5432:5432"
+    volumes:
+      - tesla_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  tesla_postgres_data:

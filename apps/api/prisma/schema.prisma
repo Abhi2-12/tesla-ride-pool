@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id    String @id @default(cuid())
+  name  String
+  email String @unique
+  role  String
+
+  rideRequests    RideRequest[]
+  vehicles        Vehicle[]
+  createdPools    Pool[]           @relation("PoolCreator")
+  poolMemberships PoolMembership[]
+  fares           Fare[]
+}
+
+model Vehicle {
+  id       String @id @default(cuid())
+  ownerId  String
+  type     String
+  capacity Int
+
+  owner User   @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  pools Pool[]
+
+  @@index([ownerId])
+}
+
+model RideRequest {
+  id          String   @id @default(cuid())
+  userId      String
+  origin      String
+  destination String
+  requestedAt DateTime @default(now())
+  status      String
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  poolMemberships PoolMembership[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Pool {
+  id        String @id @default(cuid())
+  vehicleId String
+  creatorId String
+  capacity  Int
+  state     String
+
+  vehicle     Vehicle         @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  creator     User            @relation("PoolCreator", fields: [creatorId], references: [id], onDelete: Restrict)
+  memberships PoolMembership[]
+  history     RideHistory[]
+  fares       Fare[]
+
+  @@index([vehicleId])
+  @@index([creatorId])
+  @@index([state])
+}
+
+model PoolMembership {
+  id            String   @id @default(cuid())
+  poolId        String
+  userId        String
+  rideRequestId String
+  joinedAt      DateTime @default(now())
+  status        String
+
+  pool        Pool        @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  rideRequest RideRequest @relation(fields: [rideRequestId], references: [id], onDelete: Restrict)
+
+  @@index([poolId])
+  @@index([userId])
+  @@index([rideRequestId])
+  @@index([status])
+}
+
+model RideHistory {
+  id        String   @id @default(cuid())
+  poolId    String
+  oldState  String
+  newState  String
+  changedBy String
+  changedAt DateTime @default(now())
+
+  pool Pool @relation(fields: [poolId], references: [id], onDelete: Cascade)
+
+  @@index([poolId])
+}
+
+model Fare {
+  id              String   @id @default(cuid())
+  poolId          String
+  userId          String
+  amount          Decimal
+  calculationData Json
+
+  pool Pool @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([poolId])
+  @@index([userId])
+}
