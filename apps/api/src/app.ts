@@ -3,6 +3,7 @@ import helmet from "@fastify/helmet";
 import Fastify from "fastify";
 import { env } from "./config/env.js";
 import { registerErrorHandling } from "./errors/error-handler.js";
+import { registerRoutes } from "./routes/index.js";
 import { healthRoutes } from "./routes/health.js";
 
 export function createApp() {
@@ -21,6 +22,7 @@ export function createApp() {
   });
 
   app.register(healthRoutes);
+  app.register(registerRoutes);
 
   return app;
 }
