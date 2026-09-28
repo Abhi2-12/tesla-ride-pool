@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../generated/prisma/client";
+import { PrismaClient } from "../generated/prisma/client.js";
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -17,167 +17,256 @@ const prisma = new PrismaClient({
 });
 
 async function main() {
-  console.log("Starting deterministic development seed...");
+  console.log("Starting Dhaka Tesla Pool seed with story cast...");
 
-  const alice = await prisma.user.upsert({
-    where: {
-      email: "alice.seed@example.test",
-    },
-    update: {
-      name: "Alice Seed",
-      role: "RIDER",
-    },
+  // 1. Driver & Tesla Vehicle
+  const jashim = await prisma.user.upsert({
+    where: { email: "jashim@teslapool.bd" },
+    update: { name: "Jashim", role: "DRIVER" },
     create: {
-      name: "Alice Seed",
-      email: "alice.seed@example.test",
-      role: "RIDER",
-    },
-  });
-
-  const bob = await prisma.user.upsert({
-    where: {
-      email: "bob.seed@example.test",
-    },
-    update: {
-      name: "Bob Seed",
-      role: "DRIVER",
-    },
-    create: {
-      name: "Bob Seed",
-      email: "bob.seed@example.test",
+      id: "user_jashim_driver",
+      name: "Jashim",
+      email: "jashim@teslapool.bd",
       role: "DRIVER",
     },
   });
 
-  const vehicle = await prisma.vehicle.upsert({
-    where: {
-      id: "seed_vehicle_001",
-    },
+  const bullet = await prisma.vehicle.upsert({
+    where: { id: "vehicle_bullet_001" },
     update: {
-      ownerId: bob.id,
-      type: "TESLA_MODEL_3",
-      capacity: 4,
+      ownerId: jashim.id,
+      type: "TESLA_3_WHEELER",
+      capacity: 3,
     },
     create: {
-      id: "seed_vehicle_001",
-      ownerId: bob.id,
-      type: "TESLA_MODEL_3",
-      capacity: 4,
+      id: "vehicle_bullet_001",
+      ownerId: jashim.id,
+      type: "TESLA_3_WHEELER",
+      capacity: 3,
     },
   });
 
-  const pool = await prisma.pool.upsert({
-    where: {
-      id: "seed_pool_001",
-    },
-    update: {
-      vehicleId: vehicle.id,
-      creatorId: bob.id,
-      capacity: 4,
-      state: "OPEN",
-    },
+  // 2. Passengers (Nusrat, Rafiq, Shirin)
+  const nusrat = await prisma.user.upsert({
+    where: { email: "nusrat@teslapool.bd" },
+    update: { name: "Nusrat", role: "RIDER" },
     create: {
-      id: "seed_pool_001",
-      vehicleId: vehicle.id,
-      creatorId: bob.id,
-      capacity: 4,
-      state: "OPEN",
+      id: "user_nusrat_rider",
+      name: "Nusrat",
+      email: "nusrat@teslapool.bd",
+      role: "RIDER",
     },
   });
 
-  const rideRequest = await prisma.rideRequest.upsert({
-    where: {
-      id: "seed_ride_request_001",
+  const rafiq = await prisma.user.upsert({
+    where: { email: "rafiq@teslapool.bd" },
+    update: { name: "Rafiq", role: "RIDER" },
+    create: {
+      id: "user_rafiq_rider",
+      name: "Rafiq",
+      email: "rafiq@teslapool.bd",
+      role: "RIDER",
     },
+  });
+
+  const shirin = await prisma.user.upsert({
+    where: { email: "shirin@teslapool.bd" },
+    update: { name: "Shirin", role: "RIDER" },
+    create: {
+      id: "user_shirin_rider",
+      name: "Shirin",
+      email: "shirin@teslapool.bd",
+      role: "RIDER",
+    },
+  });
+
+  // 3. Ride Requests
+  const reqNusrat = await prisma.rideRequest.upsert({
+    where: { id: "req_nusrat_001" },
     update: {
-      userId: alice.id,
-      origin: "Dhaka University",
-      destination: "Gulshan 2",
+      userId: nusrat.id,
+      origin: "Banani Road 11",
+      destination: "Mohakhali",
       status: "MATCHED",
     },
     create: {
-      id: "seed_ride_request_001",
-      userId: alice.id,
-      origin: "Dhaka University",
-      destination: "Gulshan 2",
+      id: "req_nusrat_001",
+      userId: nusrat.id,
+      origin: "Banani Road 11",
+      destination: "Mohakhali",
       status: "MATCHED",
+    },
+  });
+
+  const reqRafiq = await prisma.rideRequest.upsert({
+    where: { id: "req_rafiq_001" },
+    update: {
+      userId: rafiq.id,
+      origin: "Banani Road 11",
+      destination: "Gulshan 1",
+      status: "MATCHED",
+    },
+    create: {
+      id: "req_rafiq_001",
+      userId: rafiq.id,
+      origin: "Banani Road 11",
+      destination: "Gulshan 1",
+      status: "MATCHED",
+    },
+  });
+
+  const reqShirin = await prisma.rideRequest.upsert({
+    where: { id: "req_shirin_001" },
+    update: {
+      userId: shirin.id,
+      origin: "Banani Road 11",
+      destination: "Farmgate",
+      status: "REQUESTED",
+    },
+    create: {
+      id: "req_shirin_001",
+      userId: shirin.id,
+      origin: "Banani Road 11",
+      destination: "Farmgate",
+      status: "REQUESTED",
+    },
+  });
+
+  // 4. Shared Pool
+  const bulletPool = await prisma.pool.upsert({
+    where: { id: "pool_bullet_banani_001" },
+    update: {
+      vehicleId: bullet.id,
+      creatorId: jashim.id,
+      capacity: 3,
+      state: "MATCHED",
+    },
+    create: {
+      id: "pool_bullet_banani_001",
+      vehicleId: bullet.id,
+      creatorId: jashim.id,
+      capacity: 3,
+      state: "MATCHED",
+    },
+  });
+
+  // 5. Memberships
+  await prisma.poolMembership.upsert({
+    where: { id: "membership_nusrat_001" },
+    update: {
+      poolId: bulletPool.id,
+      userId: nusrat.id,
+      rideRequestId: reqNusrat.id,
+      status: "ACTIVE",
+    },
+    create: {
+      id: "membership_nusrat_001",
+      poolId: bulletPool.id,
+      userId: nusrat.id,
+      rideRequestId: reqNusrat.id,
+      status: "ACTIVE",
     },
   });
 
   await prisma.poolMembership.upsert({
-    where: {
-      id: "seed_membership_001",
-    },
+    where: { id: "membership_rafiq_001" },
     update: {
-      poolId: pool.id,
-      userId: alice.id,
-      rideRequestId: rideRequest.id,
+      poolId: bulletPool.id,
+      userId: rafiq.id,
+      rideRequestId: reqRafiq.id,
       status: "ACTIVE",
     },
     create: {
-      id: "seed_membership_001",
-      poolId: pool.id,
-      userId: alice.id,
-      rideRequestId: rideRequest.id,
+      id: "membership_rafiq_001",
+      poolId: bulletPool.id,
+      userId: rafiq.id,
+      rideRequestId: reqRafiq.id,
       status: "ACTIVE",
     },
   });
 
+  // 6. Ride History
   await prisma.rideHistory.upsert({
-    where: {
-      id: "seed_history_001",
-    },
+    where: { id: "history_bullet_001" },
     update: {
-      poolId: pool.id,
-      oldState: "CREATED",
-      newState: "OPEN",
-      changedBy: bob.id,
+      poolId: bulletPool.id,
+      oldState: "REQUESTED",
+      newState: "MATCHED",
+      changedBy: jashim.id,
     },
     create: {
-      id: "seed_history_001",
-      poolId: pool.id,
-      oldState: "CREATED",
-      newState: "OPEN",
-      changedBy: bob.id,
+      id: "history_bullet_001",
+      poolId: bulletPool.id,
+      oldState: "REQUESTED",
+      newState: "MATCHED",
+      changedBy: jashim.id,
+    },
+  });
+
+  // 7. Fares (in Paisa / Poysha: 1 BDT = 100 Poysha. Nusrat: 120 BDT = 12000 Poysha; Rafiq: 100 BDT = 10000 Poysha)
+  await prisma.fare.upsert({
+    where: { id: "fare_nusrat_001" },
+    update: {
+      poolId: bulletPool.id,
+      userId: nusrat.id,
+      amount: 120.0,
+      calculationData: {
+        baseFarePoysha: 8000,
+        distanceChargePoysha: 6000,
+        poolDiscountPoysha: 2000,
+        totalPoysha: 12000,
+        totalBDT: 120,
+        currency: "BDT",
+      },
+    },
+    create: {
+      id: "fare_nusrat_001",
+      poolId: bulletPool.id,
+      userId: nusrat.id,
+      amount: 120.0,
+      calculationData: {
+        baseFarePoysha: 8000,
+        distanceChargePoysha: 6000,
+        poolDiscountPoysha: 2000,
+        totalPoysha: 12000,
+        totalBDT: 120,
+        currency: "BDT",
+      },
     },
   });
 
   await prisma.fare.upsert({
-    where: {
-      id: "seed_fare_001",
-    },
+    where: { id: "fare_rafiq_001" },
     update: {
-      poolId: pool.id,
-      userId: alice.id,
-      amount: 250,
+      poolId: bulletPool.id,
+      userId: rafiq.id,
+      amount: 100.0,
       calculationData: {
-        baseFare: 200,
-        sharedRideAdjustment: 50,
+        baseFarePoysha: 8000,
+        distanceChargePoysha: 4000,
+        poolDiscountPoysha: 2000,
+        totalPoysha: 10000,
+        totalBDT: 100,
         currency: "BDT",
       },
     },
     create: {
-      id: "seed_fare_001",
-      poolId: pool.id,
-      userId: alice.id,
-      amount: 250,
+      id: "fare_rafiq_001",
+      poolId: bulletPool.id,
+      userId: rafiq.id,
+      amount: 100.0,
       calculationData: {
-        baseFare: 200,
-        sharedRideAdjustment: 50,
+        baseFarePoysha: 8000,
+        distanceChargePoysha: 4000,
+        poolDiscountPoysha: 2000,
+        totalPoysha: 10000,
+        totalBDT: 100,
         currency: "BDT",
       },
     },
   });
 
-  console.log("Seed completed successfully.");
-
-  console.log({
-    rider: alice.id,
-    driver: bob.id,
-    vehicle: vehicle.id,
-    pool: pool.id,
-    rideRequest: rideRequest.id,
-  });
+  console.log("Dhaka Tesla Pool seed completed successfully with story cast!");
 }
 
 main()

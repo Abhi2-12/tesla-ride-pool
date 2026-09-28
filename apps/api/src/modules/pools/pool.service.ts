@@ -78,6 +78,29 @@ export async function createPool(input: CreatePoolInput) {
   });
 }
 
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  REQUESTED: ["MATCHED", "ACCEPTED", "CANCELLED"],
+  OPEN: ["MATCHED", "ACCEPTED", "CANCELLED"],
+  MATCHED: ["DRIVER_ARRIVED", "CANCELLED"],
+  ACCEPTED: ["DRIVER_ARRIVED", "CANCELLED"],
+  DRIVER_ARRIVED: ["STARTED", "CANCELLED"],
+  STARTED: ["COMPLETED", "CANCELLED"],
+  COMPLETED: [],
+  CANCELLED: [],
+};
+
+export function validateStateTransition(current: string, next: string): void {
+  if (current === next) return;
+  const allowed = VALID_TRANSITIONS[current] ?? [];
+  if (!allowed.includes(next)) {
+    throw new AppError(
+      `Invalid state transition from '${current}' to '${next}'`,
+      400,
+      "INVALID_STATE_TRANSITION"
+    );
+  }
+}
+
 export async function updatePool(
   id: string,
   input: UpdatePoolInput,
@@ -92,6 +115,10 @@ export async function updatePool(
 
   if (!existing) {
     throw new AppError("Pool not found", 404, "POOL_NOT_FOUND");
+  }
+
+  if (input.state !== undefined && input.state !== existing.state) {
+    validateStateTransition(existing.state, input.state);
   }
 
   if (

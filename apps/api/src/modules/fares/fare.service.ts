@@ -17,6 +17,42 @@ export async function listFares() {
   });
 }
 
+export interface CalculateFareOptions {
+  baseFare: number;       // in BDT
+  distanceCharge: number; // in BDT
+  isPooled: boolean;      // whether passenger is sharing a pool
+  poolDiscountRate?: number; // e.g. 0.20 for 20% discount (default 20%)
+}
+
+export function calculatePassengerFare(options: CalculateFareOptions) {
+  const { baseFare, distanceCharge, isPooled, poolDiscountRate = 0.20 } = options;
+  const rawTotal = baseFare + distanceCharge;
+  const poolDiscount = isPooled ? Math.round(rawTotal * poolDiscountRate) : 0;
+  const finalFareBDT = Math.max(0, rawTotal - poolDiscount);
+  
+  // Money stored in integer Poysha (Paisa) to eliminate floating-point rounding errors
+  const baseFarePoysha = Math.round(baseFare * 100);
+  const distanceChargePoysha = Math.round(distanceCharge * 100);
+  const poolDiscountPoysha = Math.round(poolDiscount * 100);
+  const totalPoysha = Math.round(finalFareBDT * 100);
+
+  return {
+    finalFareBDT,
+    calculationData: {
+      baseFareBDT: baseFare,
+      distanceChargeBDT: distanceCharge,
+      poolDiscountBDT: poolDiscount,
+      totalBDT: finalFareBDT,
+      baseFarePoysha,
+      distanceChargePoysha,
+      poolDiscountPoysha,
+      totalPoysha,
+      currency: "BDT",
+      formula: "passengerFare = baseFare + distanceCharge - poolDiscount",
+    },
+  };
+}
+
 export async function getFareById(id: string) {
   return prisma.fare.findUnique({
     where: { id },

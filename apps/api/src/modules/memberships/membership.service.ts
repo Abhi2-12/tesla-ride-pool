@@ -42,72 +42,74 @@ export async function getMembershipById(id: string) {
 export async function createMembership(
   input: CreateMembershipInput,
 ) {
-  const [pool, user, rideRequest] = await Promise.all([
-    prisma.pool.findUnique({
-      where: { id: input.poolId },
-      include: {
-        memberships: true,
+  return prisma.$transaction(async (tx) => {
+    const [pool, user, rideRequest] = await Promise.all([
+      tx.pool.findUnique({
+        where: { id: input.poolId },
+        include: {
+          memberships: true,
+        },
+      }),
+      tx.user.findUnique({
+        where: { id: input.userId },
+      }),
+      tx.rideRequest.findUnique({
+        where: { id: input.rideRequestId },
+      }),
+    ]);
+
+    if (!pool) {
+      throw new AppError("Pool not found", 404, "POOL_NOT_FOUND");
+    }
+
+    if (!user) {
+      throw new AppError("User not found", 404, "USER_NOT_FOUND");
+    }
+
+    if (!rideRequest) {
+      throw new AppError(
+        "Ride request not found",
+        404,
+        "RIDE_REQUEST_NOT_FOUND",
+      );
+    }
+
+    if (pool.memberships.length >= pool.capacity) {
+      throw new AppError(
+        "Pool has reached its capacity",
+        409,
+        "POOL_FULL",
+      );
+    }
+
+    const existing = await tx.poolMembership.findFirst({
+      where: {
+        poolId: input.poolId,
+        userId: input.userId,
       },
-    }),
-    prisma.user.findUnique({
-      where: { id: input.userId },
-    }),
-    prisma.rideRequest.findUnique({
-      where: { id: input.rideRequestId },
-    }),
-  ]);
+    });
 
-  if (!pool) {
-    throw new AppError("Pool not found", 404, "POOL_NOT_FOUND");
-  }
+    if (existing) {
+      throw new AppError(
+        "User is already a member of this pool",
+        409,
+        "MEMBERSHIP_EXISTS",
+      );
+    }
 
-  if (!user) {
-    throw new AppError("User not found", 404, "USER_NOT_FOUND");
-  }
-
-  if (!rideRequest) {
-    throw new AppError(
-      "Ride request not found",
-      404,
-      "RIDE_REQUEST_NOT_FOUND",
-    );
-  }
-
-  if (pool.memberships.length >= pool.capacity) {
-    throw new AppError(
-      "Pool has reached its capacity",
-      409,
-      "POOL_FULL",
-    );
-  }
-
-  const existing = await prisma.poolMembership.findFirst({
-    where: {
-      poolId: input.poolId,
-      userId: input.userId,
-    },
-  });
-
-  if (existing) {
-    throw new AppError(
-      "User is already a member of this pool",
-      409,
-      "MEMBERSHIP_EXISTS",
-    );
-  }
-
-  return prisma.poolMembership.create({
-    data: {
-      poolId: input.poolId,
-      userId: input.userId,
-      rideRequestId: input.rideRequestId,
-      status: input.status,
-    },
-    include: {
-      pool: true,
-      user: true,
-      rideRequest: true,
-    },
+    return tx.poolMembership.create({
+      data: {
+        poolId: input.poolId,
+        userId: input.userId,
+        rideRequestId: input.rideRequestId,
+        status: input.status,
+      },
+      include: {
+        pool: true,
+        user: true,
+        rideRequest: true,
+      },
+    });
   });
 }
 
