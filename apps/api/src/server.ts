@@ -7,9 +7,10 @@ let isShuttingDown = false;
 
 async function start(): Promise<void> {
   try {
+    const port = Number(process.env.PORT) || 4000;
     await app.listen({
-      host: "127.0.0.1",
-      port: 3000,
+      host: "0.0.0.0",
+      port,
     });
   } catch (error) {
     app.log.error(error, "Failed to start server");
