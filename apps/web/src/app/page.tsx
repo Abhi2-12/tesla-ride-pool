@@ -1,18 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Car,
   Users,
   MapPin,
-  Clock,
   CheckCircle2,
-  AlertCircle,
   Zap,
   ArrowRight,
   ShieldAlert,
   Wallet,
   XCircle,
+  PlusCircle,
+  UserPlus,
+  CarFront,
 } from "lucide-react";
 
 const DHAKA_ZONES = [
@@ -39,6 +40,38 @@ interface Passenger {
   fareBDT: number;
   farePoysha: number;
 }
+
+interface CustomUser {
+  id: string;
+  name: string;
+  email: string;
+  role: "RIDER" | "DRIVER";
+}
+
+interface CustomVehicle {
+  id: string;
+  name: string;
+  type: string;
+  capacity: number;
+  ownerName: string;
+}
+
+const INITIAL_USERS: CustomUser[] = [
+  { id: "u_jashim", name: "Jashim", email: "jashim@teslapool.bd", role: "DRIVER" },
+  { id: "u_nusrat", name: "Nusrat", email: "nusrat@teslapool.bd", role: "RIDER" },
+  { id: "u_rafiq", name: "Rafiq", email: "rafiq@teslapool.bd", role: "RIDER" },
+  { id: "u_shirin", name: "Shirin", email: "shirin@teslapool.bd", role: "RIDER" },
+];
+
+const INITIAL_VEHICLES: CustomVehicle[] = [
+  {
+    id: "v_bullet",
+    name: "Bullet",
+    type: "Tesla 3-Wheeler Electric",
+    capacity: 3,
+    ownerName: "Jashim",
+  },
+];
 
 const INITIAL_PASSENGERS: Passenger[] = [
   {
@@ -77,26 +110,38 @@ const INITIAL_PASSENGERS: Passenger[] = [
 ];
 
 export default function DhakaTeslaPoolApp() {
-  const [activeTab, setActiveTab] = useState<"passenger" | "driver" | "pool">("passenger");
+  const [activeTab, setActiveTab] = useState<"passenger" | "driver" | "pool" | "admin">("passenger");
+  const [usersList, setUsersList] = useState<CustomUser[]>(INITIAL_USERS);
+  const [vehiclesList, setVehiclesList] = useState<CustomVehicle[]>(INITIAL_VEHICLES);
   const [selectedUser, setSelectedUser] = useState<string>("nusrat");
   const [passengers, setPassengers] = useState<Passenger[]>(INITIAL_PASSENGERS);
   const [poolState, setPoolState] = useState<"MATCHED" | "DRIVER_ARRIVED" | "STARTED" | "COMPLETED">("MATCHED");
   const [isDriverOnline, setIsDriverOnline] = useState<boolean>(true);
   const [capacityNotice, setCapacityNotice] = useState<string | null>(null);
 
-  // Form states
+  // Ride booking states
   const [pickup, setPickup] = useState("Banani Road 11");
   const [destination, setDestination] = useState("Mohakhali");
   const [seats, setSeats] = useState(1);
 
-  // Calculate total occupied seats in current pool (matched or active)
+  // New User Form State
+  const [newUserName, setNewUserName] = useState("");
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserRole, setNewUserRole] = useState<"RIDER" | "DRIVER">("RIDER");
+
+  // New Vehicle Form State
+  const [newVehicleName, setNewVehicleName] = useState("");
+  const [newVehicleCapacity, setNewVehicleCapacity] = useState(3);
+  const [newVehicleDriver, setNewVehicleDriver] = useState("Jashim");
+
+  const selectedVehicle = vehiclesList[0] || INITIAL_VEHICLES[0];
+  const capacity = selectedVehicle.capacity;
+
   const activePassengers = passengers.filter(
     (p) => p.status === "MATCHED" || p.status === "DRIVER_ARRIVED" || p.status === "STARTED"
   );
   const occupiedSeats = activePassengers.reduce((sum, p) => sum + p.seats, 0);
-  const capacity = 3; // Jashim's Bullet 3-wheeler Tesla
 
-  // Fare model helper: base 80 BDT + 40-60 distance - 20% pool discount
   const calculateFarePreview = (originStr: string, destStr: string, seatCount: number) => {
     const base = 80;
     const distance = destStr === "Gulshan 1" ? 40 : destStr === "Mohakhali" ? 60 : 80;
@@ -114,25 +159,58 @@ export default function DhakaTeslaPoolApp() {
 
   const currentFarePreview = calculateFarePreview(pickup, destination, seats);
 
-  // Handle passenger request submission
+  const handleCreateUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUserName.trim() || !newUserEmail.trim()) return;
+    const newUser: CustomUser = {
+      id: `u_${Date.now()}`,
+      name: newUserName.trim(),
+      email: newUserEmail.trim(),
+      role: newUserRole,
+    };
+    setUsersList((prev) => [...prev, newUser]);
+    setNewUserName("");
+    setNewUserEmail("");
+    setCapacityNotice(`Successfully created ${newUserRole} "${newUser.name}"!`);
+    setTimeout(() => setCapacityNotice(null), 4000);
+  };
+
+  const handleCreateVehicle = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newVehicleName.trim()) return;
+    const newVeh: CustomVehicle = {
+      id: `v_${Date.now()}`,
+      name: newVehicleName.trim(),
+      type: "Tesla Electric 3-Wheeler",
+      capacity: newVehicleCapacity,
+      ownerName: newVehicleDriver,
+    };
+    setVehiclesList((prev) => [...prev, newVeh]);
+    setNewVehicleName("");
+    setCapacityNotice(`Registered new vehicle "${newVeh.name}" with capacity ${newVeh.capacity}!`);
+    setTimeout(() => setCapacityNotice(null), 4000);
+  };
+
   const handleRequestRide = (e: React.FormEvent) => {
     e.preventDefault();
     if (occupiedSeats + seats > capacity) {
       setCapacityNotice(
-        `[CONCURRENCY BLOCKED] Bullet's 3-seat capacity exceeded! Current occupied: ${occupiedSeats}/3. Cannot add ${seats} seat(s).`
+        `[CONCURRENCY BLOCKED] ${selectedVehicle.name}'s ${capacity}-seat capacity exceeded! Current occupied: ${occupiedSeats}/${capacity}. Cannot add ${seats} seat(s).`
       );
       setTimeout(() => setCapacityNotice(null), 5000);
       return;
     }
 
-    const currentPassengerName =
-      selectedUser === "nusrat" ? "Nusrat" : selectedUser === "rafiq" ? "Rafiq" : "Shirin";
+    const currentPassengerObj = usersList.find(
+      (u) => u.name.toLowerCase() === selectedUser.toLowerCase()
+    ) || { name: selectedUser, email: `${selectedUser}@teslapool.bd` };
+
     const fare = calculateFarePreview(pickup, destination, seats);
 
     const newReq: Passenger = {
       id: `req_${Date.now()}`,
-      name: currentPassengerName,
-      email: `${selectedUser}@teslapool.bd`,
+      name: currentPassengerObj.name,
+      email: currentPassengerObj.email,
       origin: pickup,
       destination,
       status: "MATCHED",
@@ -141,12 +219,11 @@ export default function DhakaTeslaPoolApp() {
       farePoysha: fare.poysha,
     };
 
-    setPassengers((prev) => [...prev.filter((p) => p.name !== currentPassengerName), newReq]);
-    setCapacityNotice(`Ride matched successfully into Jashim's Bullet! Fare: ৳${fare.totalBDT}`);
+    setPassengers((prev) => [...prev.filter((p) => p.name !== currentPassengerObj.name), newReq]);
+    setCapacityNotice(`Ride matched into ${selectedVehicle.name}! Fare: ৳${fare.totalBDT}`);
     setTimeout(() => setCapacityNotice(null), 4000);
   };
 
-  // Driver state transitions
   const advanceTripState = (nextState: "DRIVER_ARRIVED" | "STARTED" | "COMPLETED") => {
     setPoolState(nextState);
     setPassengers((prev) =>
@@ -158,7 +235,6 @@ export default function DhakaTeslaPoolApp() {
     );
   };
 
-  // Cancel ride
   const handleCancel = (passengerId: string) => {
     setPassengers((prev) =>
       prev.map((p) => (p.id === passengerId ? { ...p, status: "CANCELLED" } : p))
@@ -171,7 +247,7 @@ export default function DhakaTeslaPoolApp() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      {/* Top Header Navigation */}
+      {/* Top Navigation */}
       <header className="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50 px-4 py-3 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-600 to-amber-500 flex items-center justify-center font-bold text-white shadow-lg">
@@ -181,7 +257,7 @@ export default function DhakaTeslaPoolApp() {
             <h1 className="font-extrabold text-lg tracking-tight text-white flex items-center gap-2">
               Dhaka Tesla Pool
               <span className="text-xs bg-red-950 text-red-400 border border-red-800 px-2 py-0.5 rounded-full">
-                Bullet 3-Wheeler MVP
+                {selectedVehicle.name} ({capacity} Seats)
               </span>
             </h1>
             <p className="text-xs text-slate-400">
@@ -190,8 +266,8 @@ export default function DhakaTeslaPoolApp() {
           </div>
         </div>
 
-        {/* View Switcher Tabs */}
-        <div className="flex items-center bg-slate-800 p-1 rounded-lg border border-slate-700">
+        {/* View Tabs */}
+        <div className="flex items-center bg-slate-800 p-1 rounded-lg border border-slate-700 flex-wrap gap-1">
           <button
             onClick={() => setActiveTab("passenger")}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
@@ -200,7 +276,7 @@ export default function DhakaTeslaPoolApp() {
                 : "text-slate-400 hover:text-white"
             }`}
           >
-            <Users className="w-3.5 h-3.5" /> Passenger Portal
+            <Users className="w-3.5 h-3.5" /> Passengers
           </button>
           <button
             onClick={() => setActiveTab("driver")}
@@ -210,7 +286,17 @@ export default function DhakaTeslaPoolApp() {
                 : "text-slate-400 hover:text-white"
             }`}
           >
-            <Car className="w-3.5 h-3.5" /> Driver (Jashim)
+            <Car className="w-3.5 h-3.5" /> Driver Console
+          </button>
+          <button
+            onClick={() => setActiveTab("admin")}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              activeTab === "admin"
+                ? "bg-indigo-600 text-white shadow"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <PlusCircle className="w-3.5 h-3.5" /> + Create User / Vehicle
           </button>
           <button
             onClick={() => setActiveTab("pool")}
@@ -220,14 +306,13 @@ export default function DhakaTeslaPoolApp() {
                 : "text-slate-400 hover:text-white"
             }`}
           >
-            <Zap className="w-3.5 h-3.5" /> Live Pool Manifest
+            <Zap className="w-3.5 h-3.5" /> Manifest
           </button>
         </div>
       </header>
 
-      {/* Main Content Area */}
+      {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
-        {/* Banner Alert for Concurrency / System Notifications */}
         {capacityNotice && (
           <div
             className={`p-4 rounded-xl border flex items-center gap-3 text-sm animate-fade-in ${
@@ -241,52 +326,179 @@ export default function DhakaTeslaPoolApp() {
           </div>
         )}
 
-        {/* PASSENGER VIEW */}
-        {activeTab === "passenger" && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Story Cast Selector & Request Form */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-5">
-              <div>
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">
-                  1. Select Passenger Persona
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {["nusrat", "rafiq", "shirin"].map((userKey) => (
-                    <button
-                      key={userKey}
-                      onClick={() => {
-                        setSelectedUser(userKey);
-                        if (userKey === "rafiq") {
-                          setDestination("Gulshan 1");
-                        } else if (userKey === "shirin") {
-                          setDestination("Farmgate");
-                        } else {
-                          setDestination("Mohakhali");
-                        }
-                      }}
-                      className={`p-2.5 rounded-xl border text-center transition-all ${
-                        selectedUser === userKey
-                          ? "bg-red-950 border-red-600 text-white font-bold"
-                          : "bg-slate-800/50 border-slate-700 text-slate-300 hover:bg-slate-800"
-                      }`}
-                    >
-                      <div className="text-sm capitalize">{userKey}</div>
-                      <div className="text-[10px] text-slate-400">
-                        {userKey === "nusrat"
-                          ? "Banani → Mohakhali"
-                          : userKey === "rafiq"
-                          ? "Banani → Gulshan 1"
-                          : "Banani → Farmgate"}
-                      </div>
-                    </button>
+        {/* ADMIN TAB: CREATE USER & VEHICLE FORMS */}
+        {activeTab === "admin" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Create User Form */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+              <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                <UserPlus className="w-4 h-4 text-indigo-400" /> Create New User / Passenger / Driver
+              </h2>
+              <form onSubmit={handleCreateUser} className="space-y-3">
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Tanvir, Sabrina, Mahfuz"
+                    value={newUserName}
+                    onChange={(e) => setNewUserName(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    placeholder="tanvir@teslapool.bd"
+                    value={newUserEmail}
+                    onChange={(e) => setNewUserEmail(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1">Role</label>
+                  <select
+                    value={newUserRole}
+                    onChange={(e) => setNewUserRole(e.target.value as "RIDER" | "DRIVER")}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white"
+                  >
+                    <option value="RIDER">Passenger (RIDER)</option>
+                    <option value="DRIVER">Driver (DRIVER)</option>
+                  </select>
+                </div>
+                <button
+                  type="submit"
+                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 font-bold rounded-lg text-xs text-white"
+                >
+                  Create User Account
+                </button>
+              </form>
+
+              {/* Registered Users List */}
+              <div className="pt-2 border-t border-slate-800">
+                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                  Existing Registered Users ({usersList.length})
+                </h4>
+                <div className="space-y-1 max-h-40 overflow-y-auto">
+                  {usersList.map((u) => (
+                    <div key={u.id} className="p-2 bg-slate-950 rounded flex justify-between text-xs">
+                      <span>{u.name} ({u.email})</span>
+                      <span className={`font-bold ${u.role === "DRIVER" ? "text-amber-400" : "text-emerald-400"}`}>
+                        {u.role}
+                      </span>
+                    </div>
                   ))}
                 </div>
               </div>
+            </div>
 
-              {/* Ride Request Form */}
+            {/* Register Vehicle Form */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+              <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                <CarFront className="w-4 h-4 text-amber-400" /> Register Tesla / Electric Vehicle
+              </h2>
+              <form onSubmit={handleCreateVehicle} className="space-y-3">
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1">Vehicle Name / Call Sign</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. CyberTrike, Rocket-1"
+                    value={newVehicleName}
+                    onChange={(e) => setNewVehicleName(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1">Assigned Driver</label>
+                  <select
+                    value={newVehicleDriver}
+                    onChange={(e) => setNewVehicleDriver(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white"
+                  >
+                    {usersList
+                      .filter((u) => u.role === "DRIVER")
+                      .map((d) => (
+                        <option key={d.id} value={d.name}>
+                          {d.name} ({d.email})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1">Fixed Seat Capacity</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="6"
+                    value={newVehicleCapacity}
+                    onChange={(e) => setNewVehicleCapacity(parseInt(e.target.value) || 1)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full py-2 bg-amber-600 hover:bg-amber-500 font-bold rounded-lg text-xs text-white"
+                >
+                  Register Vehicle & Capacity
+                </button>
+              </form>
+
+              {/* Registered Vehicles List */}
+              <div className="pt-2 border-t border-slate-800">
+                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                  Active Registered Vehicles ({vehiclesList.length})
+                </h4>
+                <div className="space-y-1 max-h-40 overflow-y-auto">
+                  {vehiclesList.map((v) => (
+                    <div key={v.id} className="p-2 bg-slate-950 rounded flex justify-between text-xs">
+                      <span>{v.name} ({v.type})</span>
+                      <span className="font-bold text-amber-400">
+                        Driver: {v.ownerName} ({v.capacity} Seats)
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* PASSENGER VIEW */}
+        {activeTab === "passenger" && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-5">
+              <div>
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">
+                  Select Passenger Persona
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {usersList
+                    .filter((u) => u.role === "RIDER")
+                    .map((u) => (
+                      <button
+                        key={u.id}
+                        onClick={() => {
+                          setSelectedUser(u.name.toLowerCase());
+                        }}
+                        className={`p-2.5 rounded-xl border text-center transition-all ${
+                          selectedUser.toLowerCase() === u.name.toLowerCase()
+                            ? "bg-red-950 border-red-600 text-white font-bold"
+                            : "bg-slate-800/50 border-slate-700 text-slate-300 hover:bg-slate-800"
+                        }`}
+                      >
+                        <div className="text-sm capitalize">{u.name}</div>
+                      </button>
+                    ))}
+                </div>
+              </div>
+
               <form onSubmit={handleRequestRide} className="space-y-4">
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-red-500" /> Book Ride / Request Pool
+                  <MapPin className="w-4 h-4 text-red-500" /> Create Standalone Ride Request
                 </h3>
 
                 <div>
@@ -294,7 +506,7 @@ export default function DhakaTeslaPoolApp() {
                   <select
                     value={pickup}
                     onChange={(e) => setPickup(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-red-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-sm"
                   >
                     {DHAKA_ZONES.map((zone) => (
                       <option key={zone} value={zone}>
@@ -309,7 +521,7 @@ export default function DhakaTeslaPoolApp() {
                   <select
                     value={destination}
                     onChange={(e) => setDestination(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-red-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-sm"
                   >
                     {DHAKA_ZONES.map((zone) => (
                       <option key={zone} value={zone}>
@@ -327,11 +539,10 @@ export default function DhakaTeslaPoolApp() {
                     max="3"
                     value={seats}
                     onChange={(e) => setSeats(parseInt(e.target.value) || 1)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-red-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-sm"
                   />
                 </div>
 
-                {/* Fare Model Calculation Card */}
                 <div className="bg-slate-950/80 border border-slate-800 p-3 rounded-xl space-y-1 text-xs">
                   <div className="flex justify-between font-medium text-slate-300">
                     <span>Base Fare:</span>
@@ -358,15 +569,14 @@ export default function DhakaTeslaPoolApp() {
 
                 <button
                   type="submit"
-                  className="w-full py-3 bg-red-600 hover:bg-red-500 font-bold rounded-xl text-white shadow-lg transition-all flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-red-600 hover:bg-red-500 font-bold rounded-xl text-white shadow-lg flex items-center justify-center gap-2"
                 >
                   <Zap className="w-4 h-4 fill-current text-yellow-300" />
-                  Request Pool Ride
+                  Submit Ride Request & Match
                 </button>
               </form>
             </div>
 
-            {/* Active Ride Status Tracker */}
             <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-6">
               <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                 <div>
@@ -390,7 +600,6 @@ export default function DhakaTeslaPoolApp() {
                 </span>
               </div>
 
-              {/* Ride Lifecycle Stepper */}
               <div className="grid grid-cols-5 gap-2 text-center text-xs">
                 {[
                   { key: "REQUESTED", label: "1. Requested" },
@@ -416,25 +625,22 @@ export default function DhakaTeslaPoolApp() {
                           : "bg-slate-950/40 border-slate-850 text-slate-600"
                       }`}
                     >
-                      <CheckCircle2
-                        className={`w-4 h-4 ${
-                          isPast ? "text-emerald-400" : "text-slate-600"
-                        }`}
-                      />
+                      <CheckCircle2 className={`w-4 h-4 ${isPast ? "text-emerald-400" : "text-slate-600"}`} />
                       <span className="text-[11px] leading-tight">{step.label}</span>
                     </div>
                   );
                 })}
               </div>
 
-              {/* Ride Details Card */}
               <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
                     <Car className="w-4 h-4 text-amber-400" />
-                    <span className="font-semibold text-slate-200">Vehicle: Jashim's "Bullet" (3-Wheeler Tesla)</span>
+                    <span className="font-semibold text-slate-200">
+                      Vehicle: {selectedVehicle.name} ({selectedVehicle.type})
+                    </span>
                   </div>
-                  <span className="text-xs text-slate-400">License: DHAKA-TA-9912</span>
+                  <span className="text-xs text-slate-400">Capacity: {selectedVehicle.capacity} Seats</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
@@ -453,7 +659,7 @@ export default function DhakaTeslaPoolApp() {
                   <div className="pt-2 flex justify-end">
                     <button
                       onClick={() => activePassenger && handleCancel(activePassenger.id)}
-                      className="px-3 py-1.5 bg-slate-800 hover:bg-red-900/50 text-slate-300 hover:text-red-300 text-xs font-semibold rounded-lg border border-slate-700 transition-all flex items-center gap-1.5"
+                      className="px-3 py-1.5 bg-slate-800 hover:bg-red-900/50 text-slate-300 hover:text-red-300 text-xs font-semibold rounded-lg border border-slate-700 flex items-center gap-1.5"
                     >
                       <XCircle className="w-3.5 h-3.5" /> Cancel Ride
                     </button>
@@ -464,14 +670,14 @@ export default function DhakaTeslaPoolApp() {
           </div>
         )}
 
-        {/* DRIVER VIEW (Jashim - Bullet) */}
+        {/* DRIVER VIEW */}
         {activeTab === "driver" && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-base font-bold text-white">Driver Console (Jashim)</h2>
-                  <p className="text-xs text-slate-400">Tesla 3-Wheeler "Bullet"</p>
+                  <h2 className="text-base font-bold text-white">Driver Console ({selectedVehicle.ownerName})</h2>
+                  <p className="text-xs text-slate-400">{selectedVehicle.name} ({selectedVehicle.type})</p>
                 </div>
                 <button
                   onClick={() => setIsDriverOnline(!isDriverOnline)}
@@ -485,10 +691,9 @@ export default function DhakaTeslaPoolApp() {
                 </button>
               </div>
 
-              {/* Vehicle Capacity Meter */}
               <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl space-y-3">
                 <div className="flex justify-between items-center text-xs font-semibold">
-                  <span className="text-slate-400">Bullet Seat Capacity:</span>
+                  <span className="text-slate-400">{selectedVehicle.name} Capacity:</span>
                   <span className="text-amber-400 font-bold">
                     {occupiedSeats} / {capacity} Seats Occupied
                   </span>
@@ -506,7 +711,6 @@ export default function DhakaTeslaPoolApp() {
                 </p>
               </div>
 
-              {/* Trip Lifecycle Controls for Jashim */}
               <div className="space-y-2">
                 <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
                   Advance Pool Trip Lifecycle
@@ -517,7 +721,7 @@ export default function DhakaTeslaPoolApp() {
                     disabled={poolState === "DRIVER_ARRIVED" || poolState === "STARTED" || poolState === "COMPLETED"}
                     className="p-3 bg-amber-900/40 hover:bg-amber-800/60 border border-amber-700 text-amber-200 rounded-xl text-xs font-bold text-left flex items-center justify-between disabled:opacity-40"
                   >
-                    <span>1. Mark Arrived at Banani Road 11</span>
+                    <span>1. Mark Arrived at Pickup</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
 
@@ -542,7 +746,6 @@ export default function DhakaTeslaPoolApp() {
               </div>
             </div>
 
-            {/* Passengers & Pool Manifest Table */}
             <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <Users className="w-4 h-4 text-emerald-400" /> Assigned Passenger Manifest
@@ -613,16 +816,16 @@ export default function DhakaTeslaPoolApp() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl">
                 <span className="text-xs text-slate-400">Vehicle</span>
-                <div className="text-base font-bold text-white mt-1">Jashim's Bullet</div>
-                <div className="text-xs text-slate-500">Tesla 3-Wheeler (Capacity 3)</div>
+                <div className="text-base font-bold text-white mt-1">{selectedVehicle.name}</div>
+                <div className="text-xs text-slate-500">{selectedVehicle.type} (Capacity {capacity})</div>
               </div>
               <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl">
                 <span className="text-xs text-slate-400">Occupied Seats</span>
                 <div className="text-base font-bold text-amber-400 mt-1">
-                  {occupiedSeats} / 3 Seats
+                  {occupiedSeats} / {capacity} Seats
                 </div>
                 <div className="text-xs text-emerald-400 font-semibold">
-                  {3 - occupiedSeats} seat available
+                  {capacity - occupiedSeats} seat(s) available
                 </div>
               </div>
               <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl">
