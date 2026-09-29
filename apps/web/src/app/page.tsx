@@ -266,48 +266,69 @@ export default function DhakaTeslaPoolApp() {
           </div>
         </div>
 
-        {/* View Tabs */}
-        <div className="flex items-center bg-slate-800 p-1 rounded-lg border border-slate-700 flex-wrap gap-1">
-          <button
-            onClick={() => setActiveTab("passenger")}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
-              activeTab === "passenger"
-                ? "bg-red-600 text-white shadow"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" /> Passengers
-          </button>
-          <button
-            onClick={() => setActiveTab("driver")}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
-              activeTab === "driver"
-                ? "bg-amber-600 text-white shadow"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            <Car className="w-3.5 h-3.5" /> Driver Console
-          </button>
-          <button
-            onClick={() => setActiveTab("admin")}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
-              activeTab === "admin"
-                ? "bg-indigo-600 text-white shadow"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            <PlusCircle className="w-3.5 h-3.5" /> + Create User / Vehicle
-          </button>
-          <button
-            onClick={() => setActiveTab("pool")}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
-              activeTab === "pool"
-                ? "bg-emerald-600 text-white shadow"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            <Zap className="w-3.5 h-3.5" /> Manifest
-          </button>
+        {/* View Tabs & Auth Widget */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center bg-slate-800 p-1 rounded-lg border border-slate-700 flex-wrap gap-1">
+            <button
+              onClick={() => setActiveTab("passenger")}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                activeTab === "passenger"
+                  ? "bg-red-600 text-white shadow"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" /> Passengers
+            </button>
+            <button
+              onClick={() => setActiveTab("driver")}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                activeTab === "driver"
+                  ? "bg-amber-600 text-white shadow"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <Car className="w-3.5 h-3.5" /> Driver Console
+            </button>
+            <button
+              onClick={() => setActiveTab("admin")}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                activeTab === "admin"
+                  ? "bg-indigo-600 text-white shadow"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <PlusCircle className="w-3.5 h-3.5" /> + Create User / Vehicle
+            </button>
+            <button
+              onClick={() => setActiveTab("pool")}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                activeTab === "pool"
+                  ? "bg-emerald-600 text-white shadow"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5" /> Manifest
+            </button>
+          </div>
+
+          {/* Explicit Login / Logout Session Widget */}
+          <div className="flex items-center gap-2 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="text-slate-300">
+              Session: <strong className="text-white capitalize">{selectedUser}</strong>
+            </span>
+            <button
+              onClick={() => {
+                const nextUser = selectedUser === "nusrat" ? "rafiq" : selectedUser === "rafiq" ? "shirin" : "nusrat";
+                setSelectedUser(nextUser);
+                setCapacityNotice(`Logged out previous session. Signed in as ${nextUser.toUpperCase()}`);
+                setTimeout(() => setCapacityNotice(null), 3000);
+              }}
+              className="ml-2 px-2 py-0.5 bg-slate-800 hover:bg-red-900/60 border border-slate-700 rounded text-[10px] text-slate-300 hover:text-white transition-all font-semibold"
+            >
+              Sign Out / Switch
+            </button>
+          </div>
         </div>
       </header>
 
