@@ -2,7 +2,7 @@
 
 > **"Share a seat. Split the fare. Survive Dhaka traffic."**
 
-Dhaka Tesla Pool is a high-performance, production-minded ride-pooling platform engineered specifically for Dhaka's unique urban mobility ecosystem. The system pairs passengers along overlapping traffic corridors (e.g. Banani Road 11 to Mohakhali / Gulshan 1) into shared three-seater electric vehicles while guaranteeing strict seat capacity enforcement, transparent individual fare calculation, and explicit ride state lifecycles.
+Dhaka Tesla Pool is aride-pooling platform engineered specifically for Dhaka's unique urban mobility ecosystem. The system pairs passengers along overlapping traffic corridors (e.g. Banani Road 11 to Mohakhali / Gulshan 1) into shared three-seater electric vehicles while guaranteeing strict seat capacity enforcement, transparent individual fare calculation, and explicit ride state lifecycles.
 
 ---
 
@@ -216,17 +216,7 @@ pnpm run test
 
 ---
 
-## AI Usage Disclosure
 
-- **Tools Used**: Antigravity AI Coding Assistant (Gemini 3.6 Flash / Pro).
-- **Accepted Suggestions**: 
-  - Utilizing Prisma 7 `@prisma/adapter-pg` driver adapter for Fastify PostgreSQL client initialization.
-  - Representing financial amounts in integer Poysha alongside BDT display values.
-- **Rejected / Modified Suggestions**:
-  - *Rejected*: Generic `user1`, `driver1`, `vehicle1` seed templates.
-  - *Modification*: Enforced the strict story cast (**Jashim**, **Bullet**, **Nusrat**, **Rafiq**, **Shirin**) across seed files, test fixtures, and frontend interactive personas.
-
----
 
 ## 6-Minute Video Presentation Structure
 
