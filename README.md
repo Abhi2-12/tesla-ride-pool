@@ -2,7 +2,8 @@
 
 > **"Share a seat. Split the fare. Survive Dhaka traffic."**
 
-Dhaka Tesla Pool is a full-stack ride-pooling platform engineered specifically for Dhaka's unique urban mobility ecosystem. The system pairs passengers along overlapping traffic corridors (e.g. Banani Road 11 to Mohakhali / Gulshan 1) into shared three-seater electric vehicles while guaranteeing strict seat capacity enforcement, transparent individual fare calculation, and explicit ride state lifecycles.
+Dhaka Tesla Pool is a full-stack ride-pooling platform designed around Dhaka's urban mobility use case. The system pairs passengers along overlapping traffic corridors (e.g. Banani Road 11 to Mohakhali / Gulshan 1) into shared three-seater electric vehicles while enforcing seat capacity, transparent individual fare calculation, and explicit ride state lifecycles.
+
 
 ---
 
@@ -14,7 +15,8 @@ It's 8:41 AM on Banani Road 11. **Jashim** is ready in **Bullet**, his battery-p
 - **Rafiq** requests a matching trip from **Banani Road 11 to Gulshan 1**.
 - The system automatically matches Nusrat and Rafiq into Bullet's pool (2 of 3 seats occupied), applying a 20% shared pool discount to both fares.
 - **Shirin** attempts to book the 3rd seat from **Banani Road 11 to Farmgate**.
-- When a 4th passenger attempts to request, the system's transaction locks block the request with a `409 POOL_FULL` error, preserving Bullet's strict 3-seat capacity limit.
+- When a 4th passenger attempts to join, the backend rejects the request with a `409 POOL_FULL` error, preserving Bullet's strict 3-seat capacity limit.
+
 
 ---
 
@@ -120,6 +122,27 @@ erDiagram
         string changedBy
     }
 ```
+---
+## Repository Structure
+
+```text
+tesla-ride-pool/
+├── apps/
+│   ├── api/                 # Fastify backend
+│   │   ├── src/
+│   │   │   ├── modules/     # Feature-based backend modules
+│   │   │   ├── middleware/
+│   │   │   ├── plugins/
+│   │   │   └── routes/
+│   │   ├── prisma/          # Schema, migrations and seed
+│   │   └── generated/       # Generated Prisma client
+│   │
+│   └── web/                 # Next.js frontend
+│
+├── docker-compose.yml       # PostgreSQL + API + Web
+├── pnpm-workspace.yaml      # Monorepo workspace configuration
+└── package.json
+```
 
 ---
 
@@ -152,10 +175,22 @@ We store money in integer **Poysha / Paisa** (1 BDT = 100 Poysha) in backend cal
 Invalid transitions (e.g. `COMPLETED` -> `STARTED`) are rejected with `400 AppError (INVALID_STATE_TRANSITION)`.
 
 ### Concurrency & Capacity Enforcement
-When Nusrat and Shirin attempt to book the final available seat simultaneously:
-1. `createMembership` runs inside an isolated Prisma Database Transaction (`prisma.$transaction`).
-2. The transaction inspects `pool.memberships.length < pool.capacity`.
-3. The first request commits atomically; the second request encounters `pool.memberships.length >= pool.capacity` and immediately fails with `409 AppError (POOL_FULL)`.
+
+Pool membership creation is performed inside a Prisma database transaction.
+
+Before adding a passenger, the API validates the pool's current membership count against its configured seat capacity. If the pool has already reached capacity, the request is rejected with:
+
+`409 POOL_FULL`
+
+For example, with Bullet's 3-seat capacity:
+
+* Nusrat → seat 1
+* Rafiq → seat 2
+* Shirin → seat 3
+* Additional passenger → `409 POOL_FULL`
+
+This keeps the capacity rule enforced at the backend rather than relying only on frontend validation.
+
 
 ---
 
@@ -218,13 +253,22 @@ pnpm run test
 
 ## AI Usage Disclosure
 
-- **Tools Used**: Antigravity AI Coding Assistant (Gemini 3.6 Flash / Pro).
-- **Accepted Suggestions**: 
-  - Utilizing Prisma 7 `@prisma/adapter-pg` driver adapter for Fastify PostgreSQL client initialization.
-  - Representing financial amounts in integer Poysha alongside BDT display values.
-- **Rejected / Modified Suggestions**:
-  - *Rejected*: Generic `user1`, `driver1`, `vehicle1` seed templates.
-  - *Modification*: Enforced the strict story cast (**Jashim**, **Bullet**, **Nusrat**, **Rafiq**, **Shirin**) across seed files, test fixtures, and frontend interactive personas.
+AI-assisted development tools were used during the design, implementation, debugging, and documentation of this project.
+
+### AI-Assisted Contributions
+
+* Assisted with code implementation, refactoring, debugging, and troubleshooting across the backend and frontend.
+* Used AI assistance when evaluating technical approaches, including Prisma 7 database integration and PostgreSQL configuration.
+* Used AI assistance to review and improve project documentation, test cases, Docker configuration, and development workflows.
+* The final implementation, technical decisions, modifications, and acceptance of generated suggestions were reviewed and controlled by the developer.
+
+### Developer Decisions and Modifications
+
+* Rejected generic seed-data templates such as `user1`, `driver1`, and `vehicle1`.
+* Enforced the project's defined story cast — **Jashim**, **Bullet**, **Nusrat**, **Rafiq**, and **Shirin** — across seed data, test fixtures, and frontend interactive personas.
+* Chose integer **Poysha** representation for monetary calculations to avoid floating-point rounding issues.
+* Reviewed and modified AI-generated suggestions to align with the project's requirements and architecture.
+
 
 ---
 
