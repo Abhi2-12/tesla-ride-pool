@@ -2,7 +2,7 @@
 
 > **"Share a seat. Split the fare. Survive Dhaka traffic."**
 
-Dhaka Tesla Pool is a high-performance, production-minded ride-pooling platform engineered specifically for Dhaka's unique urban mobility ecosystem. The system pairs passengers along overlapping traffic corridors (e.g. Banani Road 11 to Mohakhali / Gulshan 1) into shared three-seater electric vehicles while guaranteeing strict seat capacity enforcement, transparent individual fare calculation, and explicit ride state lifecycles.
+Dhaka Tesla Pool is a full-stack ride-pooling platform engineered specifically for Dhaka's unique urban mobility ecosystem. The system pairs passengers along overlapping traffic corridors (e.g. Banani Road 11 to Mohakhali / Gulshan 1) into shared three-seater electric vehicles while guaranteeing strict seat capacity enforcement, transparent individual fare calculation, and explicit ride state lifecycles.
 
 ---
 
