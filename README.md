@@ -218,12 +218,5 @@ pnpm run test
 
 
 
-## 6-Minute Video Presentation Structure
-
-- **0:00 - 1:00**: Problem introduction & Dhaka shared ride-pooling concept.
-- **1:00 - 3:00**: Technical Architecture, ERD walkthrough, fare formula derivation, state machine & concurrency transaction locking.
-- **3:00 - 6:00**: Live product tour — Passenger request flow (Nusrat & Rafiq), Driver console (Jashim & Bullet capacity limit), edge case handling when Shirin attempts 4th seat booking.
-
----
 
 *Dhaka Tesla Pool System — Production-minded Engineering for Dhaka's Urban Transit.*
